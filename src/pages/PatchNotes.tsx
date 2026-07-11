@@ -8,7 +8,12 @@ interface PatchEntry {
 const PATCH_NOTES: PatchEntry[] = [
   {
     date: 'July 11, 2026',
-    items: ['"Score" changed to "Rating"', 'Added button to automatically sort rankings by rating'],
+    items: [
+      '"Score" changed to "Rating"',
+      'Added button to automatically sort rankings by rating',
+      'Added this Patch Notes page',
+      'My Rankings: click a coaster to rank it against others at the same park, manufacturer, and manufacturer+model in a side panel — drag any of them and it stays in sync everywhere',
+    ],
   },
   {
     date: 'July 10, 2026',

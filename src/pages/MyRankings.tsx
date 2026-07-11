@@ -1,105 +1,19 @@
 import { useEffect, useState } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { supabase } from '../supabaseClient'
 import { useCurrentUser } from '../context/CurrentUserContext'
-import { formatYears } from '../utils/coasterDisplay'
+import { duplicateKey, findAmbiguousKeys, formatYears } from '../utils/coasterDisplay'
 import { ConfirmModal } from '../components/ConfirmModal'
-import type { Coaster, Park, UserCoaster } from '../types'
+import { RankingRow } from '../components/RankingRow'
+import { RankingSidePanel } from '../components/RankingSidePanel'
+import type { Coaster, Park, RankedCoaster, UserCoaster } from '../types'
 
 const SORT_CONFIRM_STEPS = [
-  "This will automatically save your rankings after you do this. Are you sure?",
-  "This action cannot be undone and you will lose the rankings you previously had set. Are you sure you're sure?",
+  "This will automatically change your rankings, based on the ratings you have set, and then save them after you do this. Are you sure?",
+  "This action cannot be undone and you will lose the custom rankings you previously had set. Are you sure you're sure?",
   'Last chance - this will overwrite your current ranking order with one based purely on ratings. Continue?',
 ]
-
-interface RankedCoaster {
-  coasterId: number
-  name: string
-  parkName: string | null
-  years: string
-  score: number | null
-}
-
-function duplicateKey(item: Pick<RankedCoaster, 'name' | 'parkName'>): string {
-  return `${item.name}::${item.parkName ?? ''}`
-}
-
-// Only show operating years when another item shares the same name + park -
-// most coasters are unique enough that the years would just be clutter.
-function findAmbiguousKeys(items: RankedCoaster[]): Set<string> {
-  const counts = new Map<string, number>()
-  for (const item of items) {
-    const key = duplicateKey(item)
-    counts.set(key, (counts.get(key) ?? 0) + 1)
-  }
-  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key))
-}
-
-function SortableRow({
-  item,
-  index,
-  showYears,
-}: {
-  item: RankedCoaster
-  index: number
-  showYears: boolean
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.coasterId,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  return (
-    <li
-      ref={setNodeRef}
-      style={{
-        ...style,
-        display: 'flex',
-        gap: '0.75rem',
-        alignItems: 'center',
-        padding: '0.5rem',
-        border: '1px solid rgba(128,128,128,0.2)',
-        borderRadius: 6,
-        marginBottom: '0.4rem',
-        background: 'var(--row-bg, transparent)',
-        cursor: 'grab',
-      }}
-      {...attributes}
-      {...listeners}
-    >
-      <strong style={{ width: '2rem' }}>#{index + 1}</strong>
-      <span style={{ flex: 1 }}>
-        {item.name}
-        {item.parkName && (
-          <span style={{ opacity: 0.7 }}>
-            {' — '}
-            {[item.parkName, showYears ? item.years : null].filter(Boolean).join(', ')}
-          </span>
-        )}
-      </span>
-      <span style={{ opacity: 0.7 }}>{item.score ?? '—'}</span>
-    </li>
-  )
-}
 
 export function MyRankings() {
   const { currentUser } = useCurrentUser()
@@ -107,6 +21,7 @@ export function MyRankings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [confirmStep, setConfirmStep] = useState(0) // 0 = no modal, 1..N = which confirmation is showing
+  const [selectedCoasterId, setSelectedCoasterId] = useState<number | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -120,7 +35,7 @@ export function MyRankings() {
       const [{ data: userCoasters }, { data: rankings }] = await Promise.all([
         supabase
           .from('user_coasters')
-          .select('*, coaster:coasters(id, name, status, opened_date, closed_date, park:parks(name))')
+          .select('*, coaster:coasters(id, name, status, opened_date, closed_date, make, model, park:parks(id, name))')
           .eq('user_id', currentUser!.id),
         supabase
           .from('user_rankings')
@@ -138,7 +53,10 @@ export function MyRankings() {
         byId.set(row.coaster_id, {
           coasterId: row.coaster_id,
           name: row.coaster.name,
+          parkId: row.coaster.park?.id ?? null,
           parkName: row.coaster.park?.name ?? null,
+          make: row.coaster.make,
+          model: row.coaster.model,
           years: formatYears(row.coaster),
           score: row.score,
         })
@@ -179,6 +97,10 @@ export function MyRankings() {
     setSaving(false)
   }
 
+  // Shared by the main list AND every sub-group list in the side panel: all of
+  // them are just filtered views of this same master order, so resolving
+  // active/over against the full `items` array keeps everything in sync no
+  // matter which visible list the drag happened in.
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -204,11 +126,12 @@ export function MyRankings() {
   }
 
   const ambiguousKeys = findAmbiguousKeys(items)
+  const selectedCoaster = items.find((i) => i.coasterId === selectedCoasterId) ?? null
 
   return (
     <div>
       <h1>My Rankings</h1>
-      <p>Drag to reorder your personal top list. {saving && <em>Saving...</em>}</p>
+      <p>Drag to reorder your personal top list, or click a coaster to rank it against its park/manufacturer/model. {saving && <em>Saving...</em>}</p>
       {!loading && items.length > 0 && (
         <p>
           <button onClick={handleSortByRatingConfirm}>Sort by Rating</button>
@@ -222,23 +145,32 @@ export function MyRankings() {
           onCancel={() => setConfirmStep(0)}
         />
       )}
+      {selectedCoaster && (
+        <RankingSidePanel
+          coaster={selectedCoaster}
+          items={items}
+          ambiguousKeys={ambiguousKeys}
+          onDragEnd={handleDragEnd}
+          onClose={() => setSelectedCoasterId(null)}
+        />
+      )}
       {loading ? (
         <p>Loading...</p>
       ) : items.length === 0 ? (
         <p>Add some coasters on the My Coasters page first.</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={items.map((i) => i.coasterId)}
-            strategy={verticalListSortingStrategy}
-          >
+          <SortableContext items={items.map((i) => i.coasterId)} strategy={verticalListSortingStrategy}>
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {items.map((item, index) => (
-                <SortableRow
+                <RankingRow
                   key={item.coasterId}
                   item={item}
                   index={index}
                   showYears={ambiguousKeys.has(duplicateKey(item))}
+                  onClick={() =>
+                    setSelectedCoasterId((prev) => (prev === item.coasterId ? null : item.coasterId))
+                  }
                 />
               ))}
             </ul>

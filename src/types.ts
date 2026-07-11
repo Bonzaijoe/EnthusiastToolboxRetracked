@@ -71,3 +71,15 @@ export interface UserRanking {
   coaster_id: number
   position: number
 }
+
+// Flattened view of a ranked coaster used by My Rankings and its sub-group side panel.
+export interface RankedCoaster {
+  coasterId: number
+  name: string
+  parkId: number | null
+  parkName: string | null
+  make: string | null
+  model: string | null
+  years: string
+  score: number | null
+}

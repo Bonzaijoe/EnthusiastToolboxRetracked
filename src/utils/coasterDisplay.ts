@@ -1,4 +1,4 @@
-import type { Coaster } from '../types'
+import type { Coaster, RankedCoaster } from '../types'
 
 // Order to display status groups in when splitting a park's coaster list -
 // "Operating" first since that's what most people are adding, defunct ones last.
@@ -38,4 +38,19 @@ export function groupByStatus(coasters: Coaster[]): [string, Coaster[]][] {
     groups.get(key)!.push(c)
   }
   return STATUS_ORDER.filter((key) => groups.has(key)).map((key) => [key, groups.get(key)!])
+}
+
+export function duplicateKey(item: Pick<RankedCoaster, 'name' | 'parkName'>): string {
+  return `${item.name}::${item.parkName ?? ''}`
+}
+
+// Only show operating years when another item shares the same name + park -
+// most coasters are unique enough that the years would just be clutter.
+export function findAmbiguousKeys(items: RankedCoaster[]): Set<string> {
+  const counts = new Map<string, number>()
+  for (const item of items) {
+    const key = duplicateKey(item)
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key))
 }
