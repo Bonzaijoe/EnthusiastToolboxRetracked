@@ -3,7 +3,7 @@ export function Combined() {
     <div>
       <h1>Combined Rankings</h1>
       <p>
-        <strong>Placeholder:</strong> this page will eventually corroborate every user's scores
+        <strong>Placeholder:</strong> this page will eventually corroborate every user's ratings
         and rankings into one collective "group top list" of every coaster. Not implemented yet —
         coming in a future iteration.
       </p>

@@ -8,6 +8,7 @@ import { Friends } from './pages/Friends'
 import { FriendProfile } from './pages/FriendProfile'
 import { Combined } from './pages/Combined'
 import { Account } from './pages/Account'
+import { PatchNotes } from './pages/PatchNotes'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
       <Nav />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/patch-notes" element={<PatchNotes />} />
         <Route
           path="/my-coasters"
           element={

@@ -228,7 +228,7 @@ export function MyCoasters() {
               <tr>
                 <th>Coaster</th>
                 <th>Park</th>
-                <th>Score</th>
+                <th>Rating</th>
                 <th></th>
               </tr>
             </thead>

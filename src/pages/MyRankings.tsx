@@ -17,7 +17,14 @@ import { CSS } from '@dnd-kit/utilities'
 import { supabase } from '../supabaseClient'
 import { useCurrentUser } from '../context/CurrentUserContext'
 import { formatYears } from '../utils/coasterDisplay'
+import { ConfirmModal } from '../components/ConfirmModal'
 import type { Coaster, Park, UserCoaster } from '../types'
+
+const SORT_CONFIRM_STEPS = [
+  "This will automatically save your rankings after you do this. Are you sure?",
+  "This action cannot be undone and you will lose the rankings you previously had set. Are you sure you're sure?",
+  'Last chance - this will overwrite your current ranking order with one based purely on ratings. Continue?',
+]
 
 interface RankedCoaster {
   coasterId: number
@@ -99,6 +106,7 @@ export function MyRankings() {
   const [items, setItems] = useState<RankedCoaster[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [confirmStep, setConfirmStep] = useState(0) // 0 = no modal, 1..N = which confirmation is showing
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -184,12 +192,36 @@ export function MyRankings() {
     })
   }
 
+  function handleSortByRatingConfirm() {
+    if (confirmStep < SORT_CONFIRM_STEPS.length) {
+      setConfirmStep(confirmStep + 1)
+      return
+    }
+    const sorted = [...items].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+    setItems(sorted)
+    persist(sorted)
+    setConfirmStep(0)
+  }
+
   const ambiguousKeys = findAmbiguousKeys(items)
 
   return (
     <div>
       <h1>My Rankings</h1>
       <p>Drag to reorder your personal top list. {saving && <em>Saving...</em>}</p>
+      {!loading && items.length > 0 && (
+        <p>
+          <button onClick={handleSortByRatingConfirm}>Sort by Rating</button>
+        </p>
+      )}
+      {confirmStep > 0 && (
+        <ConfirmModal
+          message={SORT_CONFIRM_STEPS[confirmStep - 1]}
+          confirmLabel={confirmStep < SORT_CONFIRM_STEPS.length ? 'Continue' : 'Yes, sort by rating'}
+          onConfirm={handleSortByRatingConfirm}
+          onCancel={() => setConfirmStep(0)}
+        />
+      )}
       {loading ? (
         <p>Loading...</p>
       ) : items.length === 0 ? (

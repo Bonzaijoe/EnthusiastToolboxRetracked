@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useCurrentUser } from '../context/CurrentUserContext'
 import { ToolboxIcon } from '../components/ToolboxIcon'
@@ -102,6 +102,9 @@ export function Login() {
           {loading ? 'Checking...' : 'Log in'}
         </button>
       </form>
+      <Link to="/patch-notes" style={{ opacity: 0.7 }}>
+        Patch Notes
+      </Link>
     </div>
   )
 }

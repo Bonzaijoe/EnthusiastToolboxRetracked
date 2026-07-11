@@ -68,7 +68,7 @@ export function FriendProfile() {
               <th>#</th>
               <th>Coaster</th>
               <th>Park</th>
-              <th>Score</th>
+              <th>Rating</th>
             </tr>
           </thead>
           <tbody>
