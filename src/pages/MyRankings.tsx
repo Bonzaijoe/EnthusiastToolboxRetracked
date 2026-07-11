@@ -16,15 +16,41 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { supabase } from '../supabaseClient'
 import { useCurrentUser } from '../context/CurrentUserContext'
-import type { Coaster, UserCoaster } from '../types'
+import { formatYears } from '../utils/coasterDisplay'
+import type { Coaster, Park, UserCoaster } from '../types'
 
 interface RankedCoaster {
   coasterId: number
   name: string
+  parkName: string | null
+  years: string
   score: number | null
 }
 
-function SortableRow({ item, index }: { item: RankedCoaster; index: number }) {
+function duplicateKey(item: Pick<RankedCoaster, 'name' | 'parkName'>): string {
+  return `${item.name}::${item.parkName ?? ''}`
+}
+
+// Only show operating years when another item shares the same name + park -
+// most coasters are unique enough that the years would just be clutter.
+function findAmbiguousKeys(items: RankedCoaster[]): Set<string> {
+  const counts = new Map<string, number>()
+  for (const item of items) {
+    const key = duplicateKey(item)
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key))
+}
+
+function SortableRow({
+  item,
+  index,
+  showYears,
+}: {
+  item: RankedCoaster
+  index: number
+  showYears: boolean
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.coasterId,
   })
@@ -54,7 +80,15 @@ function SortableRow({ item, index }: { item: RankedCoaster; index: number }) {
       {...listeners}
     >
       <strong style={{ width: '2rem' }}>#{index + 1}</strong>
-      <span style={{ flex: 1 }}>{item.name}</span>
+      <span style={{ flex: 1 }}>
+        {item.name}
+        {item.parkName && (
+          <span style={{ opacity: 0.7 }}>
+            {' — '}
+            {[item.parkName, showYears ? item.years : null].filter(Boolean).join(', ')}
+          </span>
+        )}
+      </span>
       <span style={{ opacity: 0.7 }}>{item.score ?? '—'}</span>
     </li>
   )
@@ -78,7 +112,7 @@ export function MyRankings() {
       const [{ data: userCoasters }, { data: rankings }] = await Promise.all([
         supabase
           .from('user_coasters')
-          .select('*, coaster:coasters(id, name)')
+          .select('*, coaster:coasters(id, name, status, opened_date, closed_date, park:parks(name))')
           .eq('user_id', currentUser!.id),
         supabase
           .from('user_rankings')
@@ -90,10 +124,14 @@ export function MyRankings() {
       if (cancelled) return
 
       const byId = new Map<number, RankedCoaster>()
-      for (const row of (userCoasters as (UserCoaster & { coaster: Coaster })[]) ?? []) {
+      for (const row of (userCoasters as (UserCoaster & {
+        coaster: Coaster & { park: Park | null }
+      })[]) ?? []) {
         byId.set(row.coaster_id, {
           coasterId: row.coaster_id,
           name: row.coaster.name,
+          parkName: row.coaster.park?.name ?? null,
+          years: formatYears(row.coaster),
           score: row.score,
         })
       }
@@ -146,6 +184,8 @@ export function MyRankings() {
     })
   }
 
+  const ambiguousKeys = findAmbiguousKeys(items)
+
   return (
     <div>
       <h1>My Rankings</h1>
@@ -162,7 +202,12 @@ export function MyRankings() {
           >
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {items.map((item, index) => (
-                <SortableRow key={item.coasterId} item={item} index={index} />
+                <SortableRow
+                  key={item.coasterId}
+                  item={item}
+                  index={index}
+                  showYears={ambiguousKeys.has(duplicateKey(item))}
+                />
               ))}
             </ul>
           </SortableContext>
