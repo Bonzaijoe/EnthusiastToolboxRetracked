@@ -62,3 +62,37 @@ button {
     padding: 0.75rem;
   }
 }
+
+.login-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 75vh;
+  text-align: center;
+  gap: 2rem;
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-title {
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 2.1rem;
+  letter-spacing: -0.01em;
+  margin: -0.3rem 0 0;
+  line-height: 1;
+}
+
+.brand-subtitle {
+  font-family: 'Dancing Script', cursive;
+  font-weight: 700;
+  font-size: 3rem;
+  color: #e63946;
+  margin: -0.55rem 0 0;
+  line-height: 1;
+}

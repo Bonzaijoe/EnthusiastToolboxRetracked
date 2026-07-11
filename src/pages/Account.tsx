@@ -76,33 +76,45 @@ export function Account() {
         <label>
           Current PIN
           <input
-            type="password"
+            type="text"
             inputMode="numeric"
+            pattern="[0-9]*"
             maxLength={4}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             value={currentPin}
-            onChange={(e) => setCurrentPin(e.target.value)}
+            onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
             style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
           />
         </label>
         <label>
           New PIN
           <input
-            type="password"
+            type="text"
             inputMode="numeric"
+            pattern="[0-9]*"
             maxLength={4}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             value={newPin}
-            onChange={(e) => setNewPin(e.target.value)}
+            onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
             style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
           />
         </label>
         <label>
           Confirm new PIN
           <input
-            type="password"
+            type="text"
             inputMode="numeric"
+            pattern="[0-9]*"
             maxLength={4}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             value={confirmPin}
-            onChange={(e) => setConfirmPin(e.target.value)}
+            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
             style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
           />
         </label>

@@ -64,12 +64,23 @@ async function importParks(parks: RcdbThemePark[]): Promise<Map<number, number>>
     if (error) throw new Error(`Park upsert failed: ${error.message}`)
   }
 
-  const { data, error } = await supabase.from('parks').select('id, rcdb_id')
-  if (error) throw new Error(`Failed reading back parks: ${error.message}`)
-
+  // PostgREST caps unpaginated selects at 1000 rows by default, so page through
+  // all parks explicitly - a plain .select() here would silently truncate and
+  // leave most coasters with a null park_id.
   const rcdbIdToOurId = new Map<number, number>()
-  for (const row of data ?? []) {
-    if (row.rcdb_id !== null) rcdbIdToOurId.set(row.rcdb_id, row.id)
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('parks')
+      .select('id, rcdb_id')
+      .order('id')
+      .range(from, from + CHUNK_SIZE - 1)
+    if (error) throw new Error(`Failed reading back parks: ${error.message}`)
+    for (const row of data ?? []) {
+      if (row.rcdb_id !== null) rcdbIdToOurId.set(row.rcdb_id, row.id)
+    }
+    if (!data || data.length < CHUNK_SIZE) break
+    from += CHUNK_SIZE
   }
   return rcdbIdToOurId
 }

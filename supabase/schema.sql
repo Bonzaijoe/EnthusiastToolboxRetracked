@@ -8,6 +8,7 @@ create table if not exists users (
   id bigint generated always as identity primary key,
   name text not null unique,
   pin text not null,
+  is_test_account boolean not null default false, -- excluded from Friends/Combined Rankings, still usable for dev/testing logins
   created_at timestamptz not null default now()
 );
 

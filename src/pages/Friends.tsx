@@ -16,7 +16,11 @@ export function Friends() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data: users } = await supabase.from('users').select('id, name').order('name')
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, name')
+        .eq('is_test_account', false)
+        .order('name')
       const others = (users ?? []).filter((u) => u.id !== currentUser?.id)
 
       const withCounts = await Promise.all(

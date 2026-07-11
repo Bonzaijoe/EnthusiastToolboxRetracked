@@ -7,6 +7,44 @@ interface MyListRow extends UserCoaster {
   coaster: Coaster & { park: Park | null }
 }
 
+// Order to display status groups in when splitting a park's coaster list -
+// "Operating" first since that's what most people are adding, defunct ones last.
+const STATUS_ORDER = ['Operating', 'Under Construction', 'SBNO', 'In Storage', 'Operated', 'Unknown']
+const STATUS_LABELS: Record<string, string> = {
+  Operating: 'Currently Operating',
+  'Under Construction': 'Under Construction',
+  SBNO: 'Standing But Not Operating (SBNO)',
+  'In Storage': 'In Storage',
+  Operated: 'Removed / Formerly Operated',
+  Unknown: 'Unknown Status',
+}
+
+function statusKey(status: string | null): string {
+  return status && STATUS_ORDER.includes(status) ? status : 'Unknown'
+}
+
+function yearOf(dateStr: string | null): string | null {
+  return dateStr?.match(/\d{4}/)?.[0] ?? null
+}
+
+function formatYears(c: Coaster): string {
+  const opened = yearOf(c.opened_date)
+  const closed = yearOf(c.closed_date)
+  if (closed) return opened ? `${opened}–${closed}` : `closed ${closed}`
+  if (c.status === 'Operating') return opened ? `${opened}–present` : 'present'
+  return opened ? `opened ${opened}` : ''
+}
+
+function groupByStatus(coasters: Coaster[]): [string, Coaster[]][] {
+  const groups = new Map<string, Coaster[]>()
+  for (const c of coasters) {
+    const key = statusKey(c.status)
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(c)
+  }
+  return STATUS_ORDER.filter((key) => groups.has(key)).map((key) => [key, groups.get(key)!])
+}
+
 export function MyCoasters() {
   const { currentUser } = useCurrentUser()
   const [myList, setMyList] = useState<MyListRow[]>([])
@@ -133,16 +171,23 @@ export function MyCoasters() {
         />
         <button onClick={searchCoasters}>Search</button>
         <ul>
-          {coasterResults.map((c) => (
-            <li key={c.id}>
-              {c.name} — {c.park?.name ?? 'Unknown park'}{' '}
-              {myCoasterIds.has(c.id) ? (
-                <em>(already on your list)</em>
-              ) : (
-                <button onClick={() => addSingleCoaster(c)}>Add</button>
-              )}
-            </li>
-          ))}
+          {coasterResults.map((c) => {
+            const years = formatYears(c)
+            return (
+              <li key={c.id}>
+                {c.name} — {c.park?.name ?? 'Unknown park'}
+                {' ('}
+                {STATUS_LABELS[statusKey(c.status)]}
+                {years && `, ${years}`}
+                {') '}
+                {myCoasterIds.has(c.id) ? (
+                  <em>(already on your list)</em>
+                ) : (
+                  <button onClick={() => addSingleCoaster(c)}>Add</button>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </section>
 
@@ -172,24 +217,38 @@ export function MyCoasters() {
           <div>
             <h3>{selectedPark.name}</h3>
             {parkCoasters.length === 0 && <p>No coasters found for this park.</p>}
-            <ul>
-              {parkCoasters.map((c) => (
-                <li key={c.id}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      disabled={myCoasterIds.has(c.id)}
-                      checked={checkedCoasterIds.has(c.id)}
-                      onChange={() => toggleChecked(c.id)}
-                    />{' '}
-                    {c.name} {myCoasterIds.has(c.id) && <em>(already added)</em>}
-                  </label>
-                </li>
-              ))}
-            </ul>
-            <button onClick={addBulkFromPark} disabled={checkedCoasterIds.size === 0}>
-              Add {checkedCoasterIds.size || ''} selected
-            </button>
+            {groupByStatus(parkCoasters).map(([statusGroup, coasters]) => (
+              <div key={statusGroup} style={{ marginBottom: '1rem' }}>
+                <h4>
+                  {STATUS_LABELS[statusGroup]} ({coasters.length})
+                </h4>
+                <ul>
+                  {coasters.map((c) => {
+                    const years = formatYears(c)
+                    return (
+                      <li key={c.id}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            disabled={myCoasterIds.has(c.id)}
+                            checked={checkedCoasterIds.has(c.id)}
+                            onChange={() => toggleChecked(c.id)}
+                          />{' '}
+                          {c.name}
+                          {years && <span style={{ opacity: 0.7 }}> ({years})</span>}{' '}
+                          {myCoasterIds.has(c.id) && <em>(already added)</em>}
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ))}
+            {parkCoasters.length > 0 && (
+              <button onClick={addBulkFromPark} disabled={checkedCoasterIds.size === 0}>
+                Add {checkedCoasterIds.size || ''} selected
+              </button>
+            )}
           </div>
         )}
       </section>
