@@ -211,6 +211,7 @@ export function CoasterManualForm({
     finalRow.last_edited_by = currentUser.name
     finalRow.last_edited_at = new Date().toISOString()
     delete finalRow.park // drop any embedded relation from initialCoaster
+    delete finalRow.id // identity column - can't be included in an update payload
 
     const result = await supabase
       .from('coasters')

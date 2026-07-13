@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { ParkManualForm } from './ParkManualForm'
 import { CoasterManualForm } from './CoasterManualForm'
+import { ParkRcdbForm } from './ParkRcdbForm'
+import { CoasterRcdbForm } from './CoasterRcdbForm'
 import type { Coaster, Park } from '../types'
 
 type EntryType = 'park' | 'coaster'
 type Source = 'manual' | 'rcdb'
-type Step = 'type' | 'source' | 'manual-form' | 'rcdb-stub'
+type Step = 'type' | 'source' | 'manual-form' | 'rcdb-form'
 
 interface EntryEditorProps {
   mode: 'add' | 'edit'
@@ -25,7 +27,7 @@ export function EntryEditor({ mode, initialType, target, onClose, onSaved }: Ent
   }
 
   function chooseSource(source: Source) {
-    setStep(source === 'manual' ? 'manual-form' : 'rcdb-stub')
+    setStep(source === 'manual' ? 'manual-form' : 'rcdb-form')
   }
 
   function handleDone(saved: Park | Coaster) {
@@ -103,12 +105,22 @@ export function EntryEditor({ mode, initialType, target, onClose, onSaved }: Ent
           />
         )}
 
-        {step === 'rcdb-stub' && (
-          <div>
-            <h2>{mode === 'add' ? 'Add' : 'Edit'} From RCDB</h2>
-            <p>Coming in the next version - pulling data straight from RCDB isn't wired up yet. Use "Manually" for now.</p>
-            <button onClick={() => setStep('source')}>Back</button>
-          </div>
+        {step === 'rcdb-form' && entryType === 'park' && (
+          <ParkRcdbForm
+            mode={mode}
+            initialPark={mode === 'edit' ? (target as Park) : undefined}
+            onDone={handleDone}
+            onCancel={onClose}
+          />
+        )}
+
+        {step === 'rcdb-form' && entryType === 'coaster' && (
+          <CoasterRcdbForm
+            mode={mode}
+            initialCoaster={mode === 'edit' ? (target as Coaster) : undefined}
+            onDone={handleDone}
+            onCancel={onClose}
+          />
         )}
       </div>
     </div>

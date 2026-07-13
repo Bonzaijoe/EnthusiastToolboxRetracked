@@ -9,7 +9,7 @@ interface PatchEntry {
 const PATCH_NOTES: PatchEntry[] = [
   {
     date: 'July 13, 2026',
-    version: '0.6',
+    version: '0.8',
     items: [
       'Added a Database tab to search, browse, and directly maintain the park/coaster catalog',
       'Clicking a park or coaster now opens a detail panel with full info and an Add-to-my-list button',
@@ -20,7 +20,14 @@ const PATCH_NOTES: PatchEntry[] = [
       'Added a "Split Coaster Entry" tool for RCDB pages that actually cover two different rides (like Dragon Challenge, or Top Thrill Dragster/Top Thrill 2)',
       'Every park and coaster now links directly back to its RCDB page, and shows who last edited it',
       'Removed social media links from parks',
-      'Next version: pulling live updates straight from RCDB instead of manual entry',
+      'Replaced the "Added" text on a park\'s coaster list with a Remove button so an accidental add is a one-click fix',
+      'Moved "Last edited by" to the bottom of park/coaster pages — useful, but shouldn\'t be the first thing you see',
+      'Cleaned up spacing on Database search results and made them plain clickable text instead of cramped buttons',
+      'RCDB link is now required when adding a new park/coaster (still optional when editing)',
+      '"Already on your list" on a coaster page now reads "You\'ve Ridden This Ride" with a Remove button next to it',
+      'Added "Add/Edit From RCDB" — paste a coaster or park link from rcdb.com and it pulls the data in for you instead of typing it all by hand',
+      'Pasting a park link also pulls in every coaster listed at that park in one go, with a checklist to review what\'s new vs. already on file before saving',
+      'Adding from RCDB shows a quick preview before saving; editing from RCDB goes through the same accept/reject review as a manual edit, so a re-scrape can\'t silently clobber a correction',
     ],
   },
   {
