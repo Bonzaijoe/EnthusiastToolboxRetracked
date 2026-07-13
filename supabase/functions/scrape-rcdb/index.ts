@@ -208,16 +208,15 @@ function parseCoasterPage(html: string, rcdbId: number): ScrapedCoaster {
 
   const { status, opened, closed } = parseStatusBlock(afterH1)
 
+  // The first <ul class=ll> is category/type/design/scale (e.g. Roller Coaster,
+  // Steel, Sit Down, Extreme). RCDB sometimes follows it with a *second* <ul>
+  // of extra descriptors (Mirror, Single Helix, Shuttle, ...) - those describe
+  // a specific layout/element, not the design itself, so they're deliberately
+  // left out of `design` rather than appended onto it.
   const tagListMatch = afterH1.match(/<ul class=ll>((?:<li>.*?)+?)<\/ul>/)
   const tags = tagListMatch ? [...tagListMatch[1].matchAll(/<a[^>]*>([^<]+)<\/a>/g)].map((m) => m[1]) : []
   const type = tags[1] ?? null
-  let design = tags[2] ?? null
-
-  const secondUlMatch = afterH1.match(/<\/ul>\s*<ul class=ll>((?:<li>.*?)+?)<\/ul>\s*(?:<div class=scroll>|<ul class=ll>)/)
-  if (secondUlMatch) {
-    const extraTags = [...secondUlMatch[1].matchAll(/<a[^>]*>([^<]+)<\/a>/g)].map((m) => m[1])
-    if (extraTags.length > 0) design = design ? `${design}, ${extraTags.join(', ')}` : extraTags.join(', ')
-  }
+  const design = tags[2] ?? null
 
   const scrollMatch = afterH1.match(/<div class=scroll><p>(.*?)<\/p><\/div>/s)
   let make: string | null = null

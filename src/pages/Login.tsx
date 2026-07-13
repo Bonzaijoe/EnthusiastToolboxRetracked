@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useCurrentUser } from '../context/CurrentUserContext'
 import { ToolboxIcon } from '../components/ToolboxIcon'
+import version from '../version.json'
 import type { AppUser } from '../types'
 
 export function Login() {
@@ -102,9 +103,12 @@ export function Login() {
           {loading ? 'Checking...' : 'Log in'}
         </button>
       </form>
-      <Link to="/patch-notes" style={{ opacity: 0.7 }}>
-        Patch Notes
-      </Link>
+      <p style={{ opacity: 0.7 }}>
+        Version {version.version} —{' '}
+        <Link to="/patch-notes" style={{ opacity: 0.7 }}>
+          Patch Notes
+        </Link>
+      </p>
     </div>
   )
 }
