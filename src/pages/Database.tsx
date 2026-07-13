@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { supabase } from '../supabaseClient'
 import { ParkDetailPanel } from '../components/ParkDetailPanel'
 import { CoasterDetailPanel } from '../components/CoasterDetailPanel'
@@ -6,6 +6,17 @@ import { EntryEditor } from '../components/EntryEditor'
 import type { Coaster, Park } from '../types'
 
 type CoasterWithPark = Coaster & { park: Park | null }
+
+const clickableTextStyle: CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  margin: 0,
+  font: 'inherit',
+  color: 'inherit',
+  textDecoration: 'underline',
+  cursor: 'pointer',
+}
 
 interface EditorState {
   mode: 'add' | 'edit'
@@ -91,10 +102,12 @@ export function Database() {
             {parkResults.length === 0 ? (
               <p style={{ opacity: 0.7 }}>No matching parks.</p>
             ) : (
-              <ul>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
                 {parkResults.map((p) => (
-                  <li key={p.id}>
-                    <button onClick={() => setSelectedPark(p)}>{p.name}</button>
+                  <li key={p.id} style={{ marginBottom: '0.6rem' }}>
+                    <button style={clickableTextStyle} onClick={() => setSelectedPark(p)}>
+                      {p.name}
+                    </button>
                     {' — '}
                     {[p.city, p.state, p.country].filter(Boolean).join(', ')}
                   </li>
@@ -108,10 +121,12 @@ export function Database() {
             {coasterResults.length === 0 ? (
               <p style={{ opacity: 0.7 }}>No matching coasters.</p>
             ) : (
-              <ul>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
                 {coasterResults.map((c) => (
-                  <li key={c.id}>
-                    <button onClick={() => setSelectedCoaster(c)}>{c.name}</button>
+                  <li key={c.id} style={{ marginBottom: '0.6rem' }}>
+                    <button style={clickableTextStyle} onClick={() => setSelectedCoaster(c)}>
+                      {c.name}
+                    </button>
                     {' — '}
                     {c.park?.name ?? 'Unknown park'}
                   </li>

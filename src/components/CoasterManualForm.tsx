@@ -102,6 +102,11 @@ export function CoasterManualForm({
 
     const rcdbId = extractRcdbId(rcdbInput)
 
+    if (mode === 'add' && !rcdbId) {
+      setError('RCDB ID or link is required when adding a new coaster.')
+      return
+    }
+
     if (mode === 'add' && rcdbId) {
       const { data: existing } = await supabase.from('coasters').select('id, name').eq('rcdb_id', rcdbId).maybeSingle()
       if (existing) {
@@ -331,7 +336,7 @@ export function CoasterManualForm({
       </label>
 
       <label>
-        RCDB ID or link
+        RCDB ID or link{mode === 'add' && ' *'}
         <input
           value={rcdbInput}
           onChange={(e) => setRcdbInput(e.target.value)}

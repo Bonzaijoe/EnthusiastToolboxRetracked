@@ -92,6 +92,16 @@ export function CoasterDetailPanel({ coaster, onClose, onEdit, onSplit }: Coaste
     if (!error) load()
   }
 
+  async function removeFromMyList() {
+    if (!currentUser) return
+    const { error } = await supabase
+      .from('user_coasters')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('coaster_id', coaster.id)
+    if (!error) load()
+  }
+
   const years = formatYears(coaster)
   const stats = (coaster.stats ?? {}) as CoasterStats
   const statEntries = Object.entries(stats).filter(([, v]) => v !== undefined && v !== null && v !== '')
@@ -140,14 +150,10 @@ export function CoasterDetailPanel({ coaster, onClose, onEdit, onSplit }: Coaste
         <p style={{ opacity: 0.8 }}>{[coaster.type, coaster.design].filter(Boolean).join(' · ')}</p>
       )}
 
-      <p style={{ opacity: 0.6, fontSize: '0.85rem' }}>
-        Last edited by {coaster.last_edited_by}
-        {coaster.last_edited_at && ` on ${new Date(coaster.last_edited_at).toLocaleDateString()}`}
-      </p>
-
       {alreadyAdded ? (
-        <p>
-          <em>Already on your list</em>
+        <p style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <strong>You've Ridden This Ride</strong>
+          <button onClick={removeFromMyList}>Remove</button>
         </p>
       ) : (
         <p>
@@ -185,6 +191,11 @@ export function CoasterDetailPanel({ coaster, onClose, onEdit, onSplit }: Coaste
 
       <h3>Combined Ranking</h3>
       <p style={{ opacity: 0.7 }}>Placeholder — coming later, once combined community rankings exist.</p>
+
+      <p style={{ opacity: 0.6, fontSize: '0.85rem', marginTop: '1.5rem' }}>
+        Last edited by {coaster.last_edited_by}
+        {coaster.last_edited_at && ` on ${new Date(coaster.last_edited_at).toLocaleDateString()}`}
+      </p>
     </SidePanel>
   )
 }

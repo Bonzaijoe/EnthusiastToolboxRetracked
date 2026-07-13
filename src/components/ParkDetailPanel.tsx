@@ -49,6 +49,22 @@ export function ParkDetailPanel({ park, onClose, onEdit }: ParkDetailPanelProps)
     if (!error) setMyCoasterIds((prev) => new Set(prev).add(coasterId))
   }
 
+  async function removeFromMyList(coasterId: number) {
+    if (!currentUser) return
+    const { error } = await supabase
+      .from('user_coasters')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('coaster_id', coasterId)
+    if (!error) {
+      setMyCoasterIds((prev) => {
+        const next = new Set(prev)
+        next.delete(coasterId)
+        return next
+      })
+    }
+  }
+
   const rcdbUrl = rcdbUrlFromId(park.rcdb_id)
 
   return (
@@ -68,11 +84,6 @@ export function ParkDetailPanel({ park, onClose, onEdit }: ParkDetailPanelProps)
       <h2 style={{ marginBottom: 0 }}>{park.name}</h2>
       <p style={{ opacity: 0.7, marginTop: '0.25rem' }}>
         {[park.city, park.state, park.country].filter(Boolean).join(', ') || 'Location unknown'}
-      </p>
-
-      <p style={{ opacity: 0.6, fontSize: '0.85rem' }}>
-        Last edited by {park.last_edited_by}
-        {park.last_edited_at && ` on ${new Date(park.last_edited_at).toLocaleDateString()}`}
       </p>
 
       <h3>Coasters</h3>
@@ -100,7 +111,7 @@ export function ParkDetailPanel({ park, onClose, onEdit }: ParkDetailPanelProps)
                       {years && <span style={{ opacity: 0.7 }}> ({years})</span>}
                     </span>
                     {already ? (
-                      <em style={{ opacity: 0.6, fontSize: '0.85rem' }}>Added</em>
+                      <button onClick={() => removeFromMyList(c.id)}>Remove</button>
                     ) : (
                       <button onClick={() => addToMyList(c.id)}>Add</button>
                     )}
@@ -111,6 +122,11 @@ export function ParkDetailPanel({ park, onClose, onEdit }: ParkDetailPanelProps)
           </div>
         ))
       )}
+
+      <p style={{ opacity: 0.6, fontSize: '0.85rem', marginTop: '1.5rem' }}>
+        Last edited by {park.last_edited_by}
+        {park.last_edited_at && ` on ${new Date(park.last_edited_at).toLocaleDateString()}`}
+      </p>
     </SidePanel>
   )
 }

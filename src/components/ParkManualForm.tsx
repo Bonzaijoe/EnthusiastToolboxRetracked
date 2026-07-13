@@ -77,6 +77,10 @@ export function ParkManualForm({ mode, initialPark, onDone, onCancel }: ParkManu
       setError('Name is required.')
       return
     }
+    if (mode === 'add' && !extractRcdbId(rcdbInput)) {
+      setError('RCDB ID or link is required when adding a new park.')
+      return
+    }
 
     const draft = buildDraft()
 
@@ -232,7 +236,7 @@ export function ParkManualForm({ mode, initialPark, onDone, onCancel }: ParkManu
       </label>
 
       <label>
-        RCDB ID or link
+        RCDB ID or link{mode === 'add' && ' *'}
         <input
           value={rcdbInput}
           onChange={(e) => setRcdbInput(e.target.value)}
