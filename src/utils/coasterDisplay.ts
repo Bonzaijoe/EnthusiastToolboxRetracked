@@ -30,6 +30,14 @@ export function formatYears(c: Pick<Coaster, 'status' | 'opened_date' | 'closed_
   return opened ? `opened ${opened}` : ''
 }
 
+// Every RCDB page - park or coaster - lives at this same flat URL pattern.
+// Split coasters (see Split Coaster Entry) share one physical RCDB page but
+// are stored as e.g. 123 and 123.1 to stay unique, so floor() first to get
+// back to the real page id.
+export function rcdbUrlFromId(rcdbId: number | null): string | null {
+  return rcdbId ? `https://rcdb.com/${Math.floor(rcdbId)}.htm` : null
+}
+
 export function groupByStatus(coasters: Coaster[]): [string, Coaster[]][] {
   const groups = new Map<string, Coaster[]>()
   for (const c of coasters) {

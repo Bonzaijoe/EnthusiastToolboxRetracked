@@ -22,7 +22,8 @@ create table if not exists parks (
   lat double precision,
   lng double precision,
   main_picture_url text,
-  social_media jsonb
+  last_edited_by text not null default 'SYSTEM', -- name of the user who last added/edited this entry via the Database tab, or 'SYSTEM' for the original bulk import
+  last_edited_at timestamptz -- null means never touched since the original import
 );
 
 create table if not exists coasters (
@@ -42,7 +43,9 @@ create table if not exists coasters (
   pictures jsonb,
   lat double precision,
   lng double precision,
-  rcdb_link text
+  rcdb_link text,
+  last_edited_by text not null default 'SYSTEM',
+  last_edited_at timestamptz
 );
 
 create index if not exists coasters_park_id_idx on coasters (park_id);

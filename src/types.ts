@@ -13,6 +13,8 @@ export interface Park {
   lat: number | null
   lng: number | null
   main_picture_url: string | null
+  last_edited_by: string
+  last_edited_at: string | null
 }
 
 export interface CoasterStats {
@@ -52,6 +54,8 @@ export interface Coaster {
   lat: number | null
   lng: number | null
   rcdb_link: string | null
+  last_edited_by: string
+  last_edited_at: string | null
 }
 
 export interface UserCoaster {

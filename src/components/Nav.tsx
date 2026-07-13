@@ -16,6 +16,7 @@ export function Nav() {
     <nav>
       <NavLink to="/my-coasters">My Coasters</NavLink>
       <NavLink to="/my-rankings">My Rankings</NavLink>
+      <NavLink to="/database">Database</NavLink>
       <NavLink to="/friends">Friends</NavLink>
       <NavLink to="/combined">Combined Rankings</NavLink>
       <NavLink to="/account">Account</NavLink>

@@ -55,7 +55,6 @@ async function importParks(parks: RcdbThemePark[]): Promise<Map<number, number>>
     lat: toNumberOrNull(p.coords?.lat),
     lng: toNumberOrNull(p.coords?.lng),
     main_picture_url: p.mainPicture?.url ?? null,
-    social_media: p.socialMedia ?? null,
   }))
 
   console.log(`Upserting ${rows.length} parks...`)

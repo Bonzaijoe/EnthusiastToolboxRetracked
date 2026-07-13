@@ -1,4 +1,5 @@
 import type { DragEndEvent } from '@dnd-kit/core'
+import { SidePanel } from './SidePanel'
 import { SubGroupList } from './SubGroupList'
 import type { RankedCoaster } from '../types'
 
@@ -38,49 +39,25 @@ interface RankingSidePanelProps {
 
 export function RankingSidePanel({ coaster, items, ambiguousKeys, onDragEnd, onClose }: RankingSidePanelProps) {
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', zIndex: 900 }}
-      onClick={onClose}
-    >
-      <div
-        className="side-panel"
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          height: '100vh',
-          width: 'min(420px, 100%)',
-          background: 'Canvas',
-          color: 'CanvasText',
-          boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.3)',
-          overflowY: 'auto',
-          padding: '1.5rem',
-          zIndex: 901,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button onClick={onClose} style={{ float: 'right' }} aria-label="Close">
-          ✕
-        </button>
-        <h2 style={{ marginTop: 0, marginBottom: 0 }}>{coaster.name}</h2>
-        {coaster.parkName && <p style={{ opacity: 0.7, marginTop: '0.25rem' }}>{coaster.parkName}</p>}
+    <SidePanel onClose={onClose}>
+      <h2 style={{ marginTop: 0, marginBottom: 0 }}>{coaster.name}</h2>
+      {coaster.parkName && <p style={{ opacity: 0.7, marginTop: '0.25rem' }}>{coaster.parkName}</p>}
 
-        {SUBGROUPS.map((def) => {
-          const label = def.label(coaster)
-          if (!label) return null
-          const filtered = items.filter((i) => def.matches(i, coaster))
-          return (
-            <SubGroupList
-              key={def.key}
-              title={label}
-              items={filtered}
-              activeCoasterId={coaster.coasterId}
-              ambiguousKeys={ambiguousKeys}
-              onDragEnd={onDragEnd}
-            />
-          )
-        })}
-      </div>
-    </div>
+      {SUBGROUPS.map((def) => {
+        const label = def.label(coaster)
+        if (!label) return null
+        const filtered = items.filter((i) => def.matches(i, coaster))
+        return (
+          <SubGroupList
+            key={def.key}
+            title={label}
+            items={filtered}
+            activeCoasterId={coaster.coasterId}
+            ambiguousKeys={ambiguousKeys}
+            onDragEnd={onDragEnd}
+          />
+        )
+      })}
+    </SidePanel>
   )
 }

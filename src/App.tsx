@@ -9,6 +9,7 @@ import { FriendProfile } from './pages/FriendProfile'
 import { Combined } from './pages/Combined'
 import { Account } from './pages/Account'
 import { PatchNotes } from './pages/PatchNotes'
+import { Database } from './pages/Database'
 
 export default function App() {
   return (
@@ -62,6 +63,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Account />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/database"
+          element={
+            <ProtectedRoute>
+              <Database />
             </ProtectedRoute>
           }
         />
