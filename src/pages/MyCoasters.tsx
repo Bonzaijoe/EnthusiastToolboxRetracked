@@ -8,10 +8,38 @@ interface MyListRow extends UserCoaster {
   coaster: Coaster & { park: Park | null }
 }
 
+type SortOption = 'added' | 'name' | 'park' | 'ranking'
+
+const SORT_LABELS: Record<SortOption, string> = {
+  added: 'Date Added',
+  name: 'Coaster Name',
+  park: 'Park Name',
+  ranking: 'Your Ranking',
+}
+
+function sortMyList(list: MyListRow[], sortBy: SortOption, rankingByCoasterId: Map<number, number>): MyListRow[] {
+  if (sortBy === 'added') return list
+  const sorted = [...list]
+  if (sortBy === 'name') {
+    sorted.sort((a, b) => a.coaster.name.localeCompare(b.coaster.name))
+  } else if (sortBy === 'park') {
+    sorted.sort((a, b) => (a.coaster.park?.name ?? '').localeCompare(b.coaster.park?.name ?? '') || a.coaster.name.localeCompare(b.coaster.name))
+  } else if (sortBy === 'ranking') {
+    sorted.sort((a, b) => {
+      const posA = rankingByCoasterId.get(a.coaster_id) ?? Infinity
+      const posB = rankingByCoasterId.get(b.coaster_id) ?? Infinity
+      return posA - posB
+    })
+  }
+  return sorted
+}
+
 export function MyCoasters() {
   const { currentUser } = useCurrentUser()
   const [myList, setMyList] = useState<MyListRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [sortBy, setSortBy] = useState<SortOption>('added')
+  const [rankingByCoasterId, setRankingByCoasterId] = useState<Map<number, number>>(new Map())
 
   const [coasterQuery, setCoasterQuery] = useState('')
   const [coasterResults, setCoasterResults] = useState<Coaster[]>([])
@@ -27,12 +55,16 @@ export function MyCoasters() {
   async function loadMyList() {
     if (!currentUser) return
     setLoading(true)
-    const { data, error } = await supabase
-      .from('user_coasters')
-      .select('*, coaster:coasters(*, park:parks(*))')
-      .eq('user_id', currentUser.id)
-      .order('added_at', { ascending: false })
+    const [{ data, error }, { data: rankings }] = await Promise.all([
+      supabase
+        .from('user_coasters')
+        .select('*, coaster:coasters(*, park:parks(*))')
+        .eq('user_id', currentUser.id)
+        .order('added_at', { ascending: false }),
+      supabase.from('user_rankings').select('coaster_id, position').eq('user_id', currentUser.id),
+    ])
     if (!error) setMyList((data as MyListRow[]) ?? [])
+    setRankingByCoasterId(new Map((rankings ?? []).map((r) => [r.coaster_id, r.position])))
     setLoading(false)
   }
 
@@ -217,7 +249,21 @@ export function MyCoasters() {
       </section>
 
       <section>
-        <h2>Your list ({myList.length})</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h2>Your list ({myList.length})</h2>
+          {myList.length > 0 && (
+            <label>
+              Sort by:{' '}
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
+                {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
+                  <option key={key} value={key}>
+                    {SORT_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
         {loading ? (
           <p>Loading...</p>
         ) : myList.length === 0 ? (
@@ -233,7 +279,7 @@ export function MyCoasters() {
               </tr>
             </thead>
             <tbody>
-              {myList.map((row) => (
+              {sortMyList(myList, sortBy, rankingByCoasterId).map((row) => (
                 <tr key={row.id}>
                   <td>{row.coaster.name}</td>
                   <td>{row.coaster.park?.name ?? '—'}</td>

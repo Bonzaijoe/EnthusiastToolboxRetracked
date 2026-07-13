@@ -9,7 +9,7 @@ interface PatchEntry {
 const PATCH_NOTES: PatchEntry[] = [
   {
     date: 'July 13, 2026',
-    version: '0.8',
+    version: '0.10',
     items: [
       'Added a Database tab to search, browse, and directly maintain the park/coaster catalog',
       'Clicking a park or coaster now opens a detail panel with full info and an Add-to-my-list button',
@@ -28,6 +28,11 @@ const PATCH_NOTES: PatchEntry[] = [
       'Added "Add/Edit From RCDB" — paste a coaster or park link from rcdb.com and it pulls the data in for you instead of typing it all by hand',
       'Pasting a park link also pulls in every coaster listed at that park in one go, with a checklist to review what\'s new vs. already on file before saving',
       'Adding from RCDB shows a quick preview before saving; editing from RCDB goes through the same accept/reject review as a manual edit, so a re-scrape can\'t silently clobber a correction',
+      'Fixed a bug that could block saving edits to an existing park or coaster entry',
+      'The "Add/Edit From RCDB" park checklist now has a "Show Changes"/"Show Details" button per coaster, so you can see exactly what\'s different before approving it',
+      'Fixed a scraping bug where a park\'s operating company (e.g. "Six Flags Entertainment Corporation") could get mistakenly listed as one of its own coasters',
+      'Fixed direct links (like sharing this Patch Notes page) 404ing instead of loading the app',
+      'My Coasters: added a "Sort by" option to order your list by coaster name, park name, or your personal ranking, not just date added',
     ],
   },
   {
