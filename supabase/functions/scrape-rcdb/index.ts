@@ -95,15 +95,28 @@ function parsePictureUrl(html: string): string | null {
 }
 
 // RCDB's own "Former status" stats row (present once a ride has changed status
-// at least once) records the *original* operating span, e.g.
-// `Former status: Operated from 2000-05-13 to 2025-11-02`. This is the only
-// reliable source for the true opening date once a coaster is no longer
-// simply "Operating" - see parseStatusBlock for why.
+// at least once) records every past status span, most recent first, <br>-joined,
+// e.g. a ride that reopened after a spell of SBNO shows THREE segments:
+//   Operated from 2024-06-22 to 2025-11-02
+//   SBNO from 2023 to 2024-06-21
+//   Operated from 1995-05-20 to 2022
+// The true opening date is the *earliest* "Operated from" across all segments,
+// not just the first one listed - otherwise a reopening reads as the original
+// opening. See parseStatusBlock for why this row matters at all.
 function parseFormerStatus(html: string): { opened: string | null; closed: string | null } {
-  const match = html.match(
-    /<th>Former status<td><a href="\/g\.htm\?id=\d+">[^<]*<\/a> from <time datetime="([^"]*)"><\/time> to <time datetime="([^"]*)"><\/time>/,
-  )
-  return match ? { opened: match[1], closed: match[2] } : { opened: null, closed: null }
+  const rowMatch = html.match(/<th>Former status<td>([\s\S]*?)(?:<tr>|<\/tbody>|<\/table>)/)
+  if (!rowMatch) return { opened: null, closed: null }
+
+  const operatedSpans: { from: string; to: string }[] = []
+  for (const seg of rowMatch[1].split('<br>')) {
+    const m = seg.match(/<a href="\/g\.htm\?id=\d+">([^<]*)<\/a> from <time datetime="([^"]*)"><\/time> to <time datetime="([^"]*)"><\/time>/)
+    if (m && m[1] === 'Operated') operatedSpans.push({ from: m[2], to: m[3] })
+  }
+  if (operatedSpans.length === 0) return { opened: null, closed: null }
+
+  const opened = operatedSpans.reduce((earliest, s) => (s.from < earliest ? s.from : earliest), operatedSpans[0].from)
+  const closed = operatedSpans.reduce((latest, s) => (s.to > latest ? s.to : latest), operatedSpans[0].to)
+  return { opened, closed }
 }
 
 function parseStatusBlock(html: string): { status: string | null; opened: string | null; closed: string | null } {
@@ -216,7 +229,11 @@ function parseCoasterPage(html: string, rcdbId: number): ScrapedCoaster {
       if (makeMatch) make = makeMatch[1]
       const modelMatch = line.match(/Model:\s*(.+)/)
       if (modelMatch) {
-        model = [...modelMatch[1].matchAll(/<a[^>]*>([^<]+)<\/a>/g)].map((m) => m[1]).join(' / ')
+        // RCDB sometimes lists "{main model} / {sub-model variant}", e.g.
+        // "SLC / 689m Standard" - the sub-model is a specific configuration
+        // of the main one, not a separate model, so keep only the first.
+        const models = [...modelMatch[1].matchAll(/<a[^>]*>([^<]+)<\/a>/g)].map((m) => m[1])
+        model = models[0] ?? null
       }
     }
   }
