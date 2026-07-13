@@ -94,12 +94,38 @@ function parsePictureUrl(html: string): string | null {
   }
 }
 
+// RCDB's own "Former status" stats row (present once a ride has changed status
+// at least once) records the *original* operating span, e.g.
+// `Former status: Operated from 2000-05-13 to 2025-11-02`. This is the only
+// reliable source for the true opening date once a coaster is no longer
+// simply "Operating" - see parseStatusBlock for why.
+function parseFormerStatus(html: string): { opened: string | null; closed: string | null } {
+  const match = html.match(
+    /<th>Former status<td><a href="\/g\.htm\?id=\d+">[^<]*<\/a> from <time datetime="([^"]*)"><\/time> to <time datetime="([^"]*)"><\/time>/,
+  )
+  return match ? { opened: match[1], closed: match[2] } : { opened: null, closed: null }
+}
+
 function parseStatusBlock(html: string): { status: string | null; opened: string | null; closed: string | null } {
   const match = html.match(/<p>(?:[^<]*,\s*)?<a href="\/g\.htm\?id=\d+">([^<]+)<\/a>[^<]*(<time[\s\S]*?<\/p>)/)
   if (!match) return { status: null, opened: null, closed: null }
   const status = match[1]
   const dates = [...match[2].matchAll(/<time datetime="([^"]*)">/g)].map((m) => m[1])
-  return { status, opened: dates[0] ?? null, closed: dates[1] ?? null }
+
+  // Two dates on the main status line (e.g. "Removed, Operated from X to Y")
+  // already give us the true opened/closed span directly.
+  if (dates.length >= 2) return { status, opened: dates[0], closed: dates[1] }
+
+  // A single "since X" date means X really is the opening date only while the
+  // ride is still Operating. For any other status (SBNO, Under Construction,
+  // In Storage, ...) that single date is when THAT status began - e.g. "SBNO
+  // since 2025-11-03" is the day the park closed, not the day the ride opened.
+  // Recover the real opening date from the Former status row instead of
+  // letting a status change silently overwrite it.
+  if (status === 'Operating') return { status, opened: dates[0] ?? null, closed: null }
+
+  const former = parseFormerStatus(html)
+  return { status, opened: former.opened, closed: former.closed ?? dates[0] ?? null }
 }
 
 function parseLocation(parenGroup: string): { city: string | null; state: string | null; country: string | null } {
@@ -140,6 +166,10 @@ function parseStatsTables(html: string): ScrapedStats | null {
       const rowMatch = row.match(/<th>([^<]+)<td>([\s\S]*)/)
       if (!rowMatch) continue
       const label = rowMatch[1].trim().toLowerCase()
+      // Already captured structurally as opened_date/closed_date by parseStatusBlock -
+      // its <time> tags have no visible text, so keeping it here would just show up
+      // as a broken-looking "Operated from  to " with the dates silently missing.
+      if (label === 'former status') continue
       const rawValue = rowMatch[2].replace(/<\/tbody>|<\/table>|<\/section>/g, '')
       const segments = rawValue
         .split(/<br>|<li>/)
