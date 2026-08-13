@@ -8,6 +8,15 @@ interface PatchEntry {
 
 const PATCH_NOTES: PatchEntry[] = [
   {
+    date: 'August 13, 2026',
+    version: '0.14',
+    items: [
+      'Raised the Database search cap from 25 to 50 results, with a note when there are more than that',
+      'My Rankings no longer saves every single drag automatically — hit "Save Rankings" to keep your order, or "Save and Submit" to also count it toward Combined Rankings, so mid-reorder experimenting never affects anyone else\'s view',
+      'Added Combined Rankings: everyone\'s submitted personal rankings averaged into one group top list, with a toggle to switch to Combined Ratings (everyone\'s 1-10 ratings averaged instead) — both show how many people\'s data went into each number',
+    ],
+  },
+  {
     date: 'July 13, 2026',
     version: '0.13',
     items: [

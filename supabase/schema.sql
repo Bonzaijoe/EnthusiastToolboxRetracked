@@ -71,6 +71,22 @@ create table if not exists user_rankings (
   unique (user_id, position)
 );
 
+-- A snapshot of user_rankings as of the last time each person hit "Save and
+-- Submit" on My Rankings - deliberately separate from the live table above so
+-- that mid-flight drag edits (even after a plain "Save Rankings") never move
+-- Combined Rankings until the user explicitly submits again.
+create table if not exists submitted_rankings (
+  id bigint generated always as identity primary key,
+  user_id bigint not null references users (id) on delete cascade,
+  coaster_id bigint not null references coasters (id) on delete cascade,
+  position integer not null,
+  submitted_at timestamptz not null default now(),
+  unique (user_id, coaster_id),
+  unique (user_id, position)
+);
+
+create index if not exists submitted_rankings_coaster_id_idx on submitted_rankings (coaster_id);
+
 -- Seed the 7 friends. Everyone starts on PIN 1234 and can change it later
 -- from the Account Settings page.
 insert into users (name, pin) values

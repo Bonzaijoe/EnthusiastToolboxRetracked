@@ -30,6 +30,9 @@ export function Database() {
   const [coasterResults, setCoasterResults] = useState<CoasterWithPark[]>([])
   const [searched, setSearched] = useState(false)
 
+  const [parksTruncated, setParksTruncated] = useState(false)
+  const [coastersTruncated, setCoastersTruncated] = useState(false)
+
   const [selectedPark, setSelectedPark] = useState<Park | null>(null)
   const [selectedCoaster, setSelectedCoaster] = useState<CoasterWithPark | null>(null)
   const [editor, setEditor] = useState<EditorState | null>(null)
@@ -43,6 +46,8 @@ export function Database() {
     setPanelKey((k) => k + 1)
   }
 
+  const SEARCH_LIMIT = 50
+
   async function search() {
     const q = query.trim()
     if (q.length < 2) {
@@ -52,18 +57,25 @@ export function Database() {
       return
     }
 
+    // Fetch one extra row past the limit so we can tell whether results were
+    // actually truncated, without it ever being shown.
     const [{ data: parks }, { data: coasters }] = await Promise.all([
-      supabase.from('parks').select('*').ilike('name', `%${q}%`).order('name').limit(25),
+      supabase.from('parks').select('*').ilike('name', `%${q}%`).order('name').limit(SEARCH_LIMIT + 1),
       supabase
         .from('coasters')
         .select('*, park:parks(*)')
         .ilike('name', `%${q}%`)
         .order('name')
-        .limit(25),
+        .limit(SEARCH_LIMIT + 1),
     ])
 
-    setParkResults((parks as Park[]) ?? [])
-    setCoasterResults((coasters as CoasterWithPark[]) ?? [])
+    const parkRows = (parks as Park[]) ?? []
+    const coasterRows = (coasters as CoasterWithPark[]) ?? []
+
+    setParksTruncated(parkRows.length > SEARCH_LIMIT)
+    setCoastersTruncated(coasterRows.length > SEARCH_LIMIT)
+    setParkResults(parkRows.slice(0, SEARCH_LIMIT))
+    setCoasterResults(coasterRows.slice(0, SEARCH_LIMIT))
     setSearched(true)
   }
 
@@ -99,6 +111,9 @@ export function Database() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <section>
             <h2>Parks ({parkResults.length})</h2>
+            {parksTruncated && (
+              <p style={{ opacity: 0.7 }}>More than {SEARCH_LIMIT} results. Showing the first {SEARCH_LIMIT}...</p>
+            )}
             {parkResults.length === 0 ? (
               <p style={{ opacity: 0.7 }}>No matching parks.</p>
             ) : (
@@ -118,6 +133,9 @@ export function Database() {
 
           <section>
             <h2>Coasters ({coasterResults.length})</h2>
+            {coastersTruncated && (
+              <p style={{ opacity: 0.7 }}>More than {SEARCH_LIMIT} results. Showing the first {SEARCH_LIMIT}...</p>
+            )}
             {coasterResults.length === 0 ? (
               <p style={{ opacity: 0.7 }}>No matching coasters.</p>
             ) : (

@@ -10,7 +10,7 @@ import { RankingSidePanel } from '../components/RankingSidePanel'
 import type { Coaster, Park, RankedCoaster, UserCoaster } from '../types'
 
 const SORT_CONFIRM_STEPS = [
-  "This will automatically change your rankings, based on the ratings you have set, and then save them after you do this. Are you sure?",
+  "This will change your ranking order to match the ratings you have set. You'll still need to hit Save Rankings afterward to keep it. Are you sure?",
   "This action cannot be undone and you will lose the custom rankings you previously had set. Are you sure you're sure?",
   'Last chance - this will overwrite your current ranking order with one based purely on ratings. Continue?',
 ]
@@ -20,6 +20,8 @@ export function MyRankings() {
   const [items, setItems] = useState<RankedCoaster[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null)
   const [confirmStep, setConfirmStep] = useState(0) // 0 = no modal, 1..N = which confirmation is showing
   const [selectedCoasterId, setSelectedCoasterId] = useState<number | null>(null)
 
@@ -32,7 +34,7 @@ export function MyRankings() {
     async function load() {
       setLoading(true)
 
-      const [{ data: userCoasters }, { data: rankings }] = await Promise.all([
+      const [{ data: userCoasters }, { data: rankings }, { data: submitted }] = await Promise.all([
         supabase
           .from('user_coasters')
           .select('*, coaster:coasters(id, name, status, opened_date, closed_date, make, model, park:parks(id, name))')
@@ -42,6 +44,12 @@ export function MyRankings() {
           .select('coaster_id, position')
           .eq('user_id', currentUser!.id)
           .order('position'),
+        supabase
+          .from('submitted_rankings')
+          .select('submitted_at')
+          .eq('user_id', currentUser!.id)
+          .order('submitted_at', { ascending: false })
+          .limit(1),
       ])
 
       if (cancelled) return
@@ -75,6 +83,8 @@ export function MyRankings() {
       }
 
       setItems(ordered)
+      setSubmittedAt(submitted && submitted.length > 0 ? submitted[0].submitted_at : null)
+      setDirty(false)
       setLoading(false)
     }
 
@@ -84,9 +94,10 @@ export function MyRankings() {
     }
   }, [currentUser])
 
-  async function persist(newItems: RankedCoaster[]) {
+  // Just the DB write - doesn't touch `saving`/`dirty`, since the two save
+  // actions below combine this with other work and manage that state themselves.
+  async function persistRankings(newItems: RankedCoaster[]) {
     if (!currentUser) return
-    setSaving(true)
     await supabase.from('user_rankings').delete().eq('user_id', currentUser.id)
     const rows = newItems.map((item, index) => ({
       user_id: currentUser.id,
@@ -94,13 +105,14 @@ export function MyRankings() {
       position: index,
     }))
     if (rows.length > 0) await supabase.from('user_rankings').insert(rows)
-    setSaving(false)
   }
 
   // Shared by the main list AND every sub-group list in the side panel: all of
   // them are just filtered views of this same master order, so resolving
   // active/over against the full `items` array keeps everything in sync no
-  // matter which visible list the drag happened in.
+  // matter which visible list the drag happened in. Deliberately local-only -
+  // nothing is written to the database until Save Rankings / Save and Submit
+  // is clicked, so mid-drag experimenting never touches anyone else's view.
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -108,10 +120,38 @@ export function MyRankings() {
     setItems((prev) => {
       const oldIndex = prev.findIndex((i) => i.coasterId === active.id)
       const newIndex = prev.findIndex((i) => i.coasterId === over.id)
-      const next = arrayMove(prev, oldIndex, newIndex)
-      persist(next)
-      return next
+      return arrayMove(prev, oldIndex, newIndex)
     })
+    setDirty(true)
+  }
+
+  async function handleSaveRankings() {
+    if (!currentUser) return
+    setSaving(true)
+    await persistRankings(items)
+    setSaving(false)
+    setDirty(false)
+  }
+
+  // Saves the personal order (same as above) AND replaces this user's
+  // submitted_rankings snapshot - the only thing Combined Rankings reads from,
+  // so a plain drag or a plain Save never moves the combined list, only this.
+  async function handleSaveAndSubmit() {
+    if (!currentUser) return
+    setSaving(true)
+    await persistRankings(items)
+    const now = new Date().toISOString()
+    await supabase.from('submitted_rankings').delete().eq('user_id', currentUser.id)
+    const rows = items.map((item, index) => ({
+      user_id: currentUser.id,
+      coaster_id: item.coasterId,
+      position: index,
+      submitted_at: now,
+    }))
+    if (rows.length > 0) await supabase.from('submitted_rankings').insert(rows)
+    setSaving(false)
+    setDirty(false)
+    setSubmittedAt(now)
   }
 
   function handleSortByRatingConfirm() {
@@ -121,7 +161,7 @@ export function MyRankings() {
     }
     const sorted = [...items].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
     setItems(sorted)
-    persist(sorted)
+    setDirty(true)
     setConfirmStep(0)
   }
 
@@ -131,11 +171,25 @@ export function MyRankings() {
   return (
     <div>
       <h1>My Rankings</h1>
-      <p>Drag to reorder your personal top list, or click a coaster to rank it against its park/manufacturer/model. {saving && <em>Saving...</em>}</p>
+      <p>Drag to reorder your personal top list, or click a coaster to rank it against its park/manufacturer/model.</p>
       {!loading && items.length > 0 && (
-        <p>
-          <button onClick={handleSortByRatingConfirm}>Sort by Rating</button>
-        </p>
+        <>
+          <p style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button onClick={handleSaveRankings} disabled={!dirty || saving}>
+              {saving ? 'Saving...' : 'Save Rankings'}
+            </button>
+            <button onClick={handleSaveAndSubmit} disabled={saving}>
+              {saving ? 'Saving...' : 'Save and Submit'}
+            </button>
+            <button onClick={handleSortByRatingConfirm}>Sort by Rating</button>
+          </p>
+          <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+            {dirty && <span>You have unsaved changes. </span>}
+            {submittedAt
+              ? `Last submitted to Combined Rankings on ${new Date(submittedAt).toLocaleDateString()}.`
+              : "You haven't submitted to Combined Rankings yet."}
+          </p>
+        </>
       )}
       {confirmStep > 0 && (
         <ConfirmModal
