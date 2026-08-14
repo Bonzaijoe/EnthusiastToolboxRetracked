@@ -296,6 +296,7 @@ export function MyCoasters() {
                         const v = e.target.value
                         updateScore(row.id, v === '' ? null : Number(v))
                       }}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </td>
                   <td>

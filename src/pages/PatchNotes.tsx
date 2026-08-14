@@ -8,6 +8,16 @@ interface PatchEntry {
 
 const PATCH_NOTES: PatchEntry[] = [
   {
+    date: 'August 14, 2026',
+    version: '0.15',
+    items: [
+      'Combined Ratings is now the default tab (was Rankings), and sits on the left of the toggle',
+      'Combined Rankings/Ratings are now capped at the top 200 coasters',
+      'Fixed accidentally changing a Rating on My Coasters by scrolling while your cursor happened to be over the number box',
+      '"Sort by Rating" on My Rankings now explicitly keeps ties in their prior order, so rating a few new coasters and re-sorting slots them into place instead of reshuffling everything else',
+    ],
+  },
+  {
     date: 'August 13, 2026',
     version: '0.14',
     items: [

@@ -5,6 +5,8 @@ import type { Coaster, Park } from '../types'
 
 type Mode = 'rankings' | 'ratings'
 
+const TOP_N = 200
+
 interface CoasterRow {
   coasterId: number
   name: string
@@ -17,7 +19,7 @@ interface CoasterRow {
 type CoasterWithPark = Coaster & { park: Park | null }
 
 export function Combined() {
-  const [mode, setMode] = useState<Mode>('rankings')
+  const [mode, setMode] = useState<Mode>('ratings')
   const [rankRows, setRankRows] = useState<CoasterRow[]>([])
   const [rankPeopleCount, setRankPeopleCount] = useState(0)
   const [ratingRows, setRatingRows] = useState<CoasterRow[]>([])
@@ -80,9 +82,9 @@ export function Combined() {
       const ratingCombined = buildRows(ratingGrouped)
       ratingCombined.sort((a, b) => b.avgValue - a.avgValue) // higher avg rating = better
 
-      setRankRows(rankCombined)
+      setRankRows(rankCombined.slice(0, TOP_N))
       setRankPeopleCount(rankPeople.size)
-      setRatingRows(ratingCombined)
+      setRatingRows(ratingCombined.slice(0, TOP_N))
       setRatingPeopleCount(ratingPeople.size)
       setLoading(false)
     }
@@ -111,7 +113,7 @@ export function Combined() {
 
   return (
     <div>
-      <h1>Combined {mode === 'rankings' ? 'Rankings' : 'Ratings'}</h1>
+      <h1>Combined {mode === 'rankings' ? 'Rankings' : 'Ratings'} (Top {TOP_N})</h1>
 
       <div
         style={{
@@ -122,19 +124,6 @@ export function Combined() {
           marginBottom: '1rem',
         }}
       >
-        <button
-          onClick={() => setMode('rankings')}
-          style={{
-            padding: '0.4rem 1rem',
-            borderRadius: 999,
-            border: 'none',
-            background: mode === 'rankings' ? 'CanvasText' : 'transparent',
-            color: mode === 'rankings' ? 'Canvas' : 'inherit',
-            cursor: 'pointer',
-          }}
-        >
-          Rankings
-        </button>
         <button
           onClick={() => setMode('ratings')}
           style={{
@@ -147,6 +136,19 @@ export function Combined() {
           }}
         >
           Ratings
+        </button>
+        <button
+          onClick={() => setMode('rankings')}
+          style={{
+            padding: '0.4rem 1rem',
+            borderRadius: 999,
+            border: 'none',
+            background: mode === 'rankings' ? 'CanvasText' : 'transparent',
+            color: mode === 'rankings' ? 'Canvas' : 'inherit',
+            cursor: 'pointer',
+          }}
+        >
+          Rankings
         </button>
       </div>
 

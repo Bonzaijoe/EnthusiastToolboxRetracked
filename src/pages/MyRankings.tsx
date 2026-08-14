@@ -159,7 +159,13 @@ export function MyRankings() {
       setConfirmStep(confirmStep + 1)
       return
     }
-    const sorted = [...items].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+    // Tiebreak by current position, not just whatever order .sort() happens to
+    // leave ties in - so re-sorting after adding/rating a few new coasters slots
+    // them in among their rating tier instead of reshuffling everything else.
+    const sorted = items
+      .map((item, index) => ({ item, index }))
+      .sort((a, b) => (b.item.score ?? -1) - (a.item.score ?? -1) || a.index - b.index)
+      .map(({ item }) => item)
     setItems(sorted)
     setDirty(true)
     setConfirmStep(0)
