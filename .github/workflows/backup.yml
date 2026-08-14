@@ -1,0 +1,45 @@
+name: Database Backup
+
+# Runs twice a week (not just once) to stay well clear of Supabase's
+# free-tier pause-on-inactivity window, and doubles as the backup job:
+# actually connecting and dumping the DB counts as real activity.
+on:
+  schedule:
+    - cron: '0 12 * * 1,4' # Monday & Thursday, 12:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: pg_dump "$DATABASE_URL" --no-owner --no-privileges -f "/tmp/backup-$(date +%Y-%m-%d).sql"
+
+      - name: Commit dump to backups branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin backups >/dev/null 2>&1; then
+            git fetch origin backups:backups
+            git checkout backups
+          else
+            # First run ever: bootstrap the branch, empty of master's files.
+            git checkout --orphan backups
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          cp /tmp/backup-*.sql .
+          git add backup-*.sql
+          git commit -m "Database backup $(date +%Y-%m-%d)"
+          git push origin backups
