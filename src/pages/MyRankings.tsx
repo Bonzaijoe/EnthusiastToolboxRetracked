@@ -3,6 +3,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type D
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { supabase } from '../supabaseClient'
 import { useCurrentUser } from '../context/CurrentUserContext'
+import { useUnsavedChanges } from '../context/UnsavedChangesContext'
 import { duplicateKey, findAmbiguousKeys, formatYears } from '../utils/coasterDisplay'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { RankingRow } from '../components/RankingRow'
@@ -17,6 +18,7 @@ const SORT_CONFIRM_STEPS = [
 
 export function MyRankings() {
   const { currentUser } = useCurrentUser()
+  const { setHasUnsavedChanges } = useUnsavedChanges()
   const [items, setItems] = useState<RankedCoaster[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -94,6 +96,28 @@ export function MyRankings() {
     }
   }, [currentUser])
 
+  // Mirrors `dirty` into the shared context so the nav bar can confirm before
+  // navigating away - and clears it on unmount so it doesn't leak into other
+  // pages if this one goes away some way other than a guarded nav click
+  // (e.g. the browser's own back/forward buttons).
+  useEffect(() => {
+    setHasUnsavedChanges(dirty)
+    return () => setHasUnsavedChanges(false)
+  }, [dirty, setHasUnsavedChanges])
+
+  // Covers leaving via tab close, refresh, or a typed URL/bookmark - none of
+  // which the nav bar's guardedNavigate ever sees. The browser controls the
+  // actual prompt text; e.returnValue is what triggers it.
+  useEffect(() => {
+    if (!dirty) return
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [dirty])
+
   // Just the DB write - doesn't touch `saving`/`dirty`, since the two save
   // actions below combine this with other work and manage that state themselves.
   async function persistRankings(newItems: RankedCoaster[]) {
@@ -120,6 +144,19 @@ export function MyRankings() {
     setItems((prev) => {
       const oldIndex = prev.findIndex((i) => i.coasterId === active.id)
       const newIndex = prev.findIndex((i) => i.coasterId === over.id)
+      return arrayMove(prev, oldIndex, newIndex)
+    })
+    setDirty(true)
+  }
+
+  // Same local-only, no-auto-persist behavior as handleDragEnd - just driven by
+  // a typed target position instead of a drag. targetPosition is 1-indexed to
+  // match what's shown on screen (#1, #2, ...).
+  function handleJumpToPosition(coasterId: number, targetPosition: number) {
+    setItems((prev) => {
+      const oldIndex = prev.findIndex((i) => i.coasterId === coasterId)
+      if (oldIndex === -1) return prev
+      const newIndex = Math.min(Math.max(targetPosition - 1, 0), prev.length - 1)
       return arrayMove(prev, oldIndex, newIndex)
     })
     setDirty(true)
@@ -211,6 +248,7 @@ export function MyRankings() {
           items={items}
           ambiguousKeys={ambiguousKeys}
           onDragEnd={handleDragEnd}
+          onJumpToPosition={handleJumpToPosition}
           onClose={() => setSelectedCoasterId(null)}
         />
       )}

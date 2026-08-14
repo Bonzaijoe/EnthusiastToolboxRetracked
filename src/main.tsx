@@ -3,13 +3,16 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { CurrentUserProvider } from './context/CurrentUserContext'
+import { UnsavedChangesProvider } from './context/UnsavedChangesContext'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <CurrentUserProvider>
-        <App />
+        <UnsavedChangesProvider>
+          <App />
+        </UnsavedChangesProvider>
       </CurrentUserProvider>
     </BrowserRouter>
   </StrictMode>,

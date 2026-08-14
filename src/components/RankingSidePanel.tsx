@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SidePanel } from './SidePanel'
 import { SubGroupList } from './SubGroupList'
@@ -34,14 +35,42 @@ interface RankingSidePanelProps {
   items: RankedCoaster[]
   ambiguousKeys: Set<string>
   onDragEnd: (event: DragEndEvent) => void
+  onJumpToPosition: (coasterId: number, targetPosition: number) => void
   onClose: () => void
 }
 
-export function RankingSidePanel({ coaster, items, ambiguousKeys, onDragEnd, onClose }: RankingSidePanelProps) {
+export function RankingSidePanel({ coaster, items, ambiguousKeys, onDragEnd, onJumpToPosition, onClose }: RankingSidePanelProps) {
+  const [jumpValue, setJumpValue] = useState('')
+  const currentPosition = items.findIndex((i) => i.coasterId === coaster.coasterId) + 1
+
+  function handleJump(e: React.FormEvent) {
+    e.preventDefault()
+    const target = Number(jumpValue)
+    if (!target || target < 1) return
+    onJumpToPosition(coaster.coasterId, target)
+    setJumpValue('')
+  }
+
   return (
     <SidePanel onClose={onClose}>
       <h2 style={{ marginTop: 0, marginBottom: 0 }}>{coaster.name}</h2>
       {coaster.parkName && <p style={{ opacity: 0.7, marginTop: '0.25rem' }}>{coaster.parkName}</p>}
+
+      <form onSubmit={handleJump} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', margin: '0.75rem 0' }}>
+        <label style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          Currently #{currentPosition}. Move to #
+          <input
+            type="number"
+            min={1}
+            max={items.length}
+            value={jumpValue}
+            onChange={(e) => setJumpValue(e.target.value)}
+            placeholder={String(currentPosition)}
+            style={{ width: '4.5rem' }}
+          />
+        </label>
+        <button type="submit">Go</button>
+      </form>
 
       {SUBGROUPS.map((def) => {
         const label = def.label(coaster)
