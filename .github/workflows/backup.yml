@@ -31,7 +31,9 @@ jobs:
       - name: Dump database
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: pg_dump "$DATABASE_URL" --no-owner --no-privileges -f "/tmp/backup-$(date +%Y-%m-%d).sql"
+        # Called with the full path - the runner image ships pg_dump 16
+        # directly on PATH, which shadows the pgdg-installed 17 above.
+        run: /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --no-owner --no-privileges -f "/tmp/backup-$(date +%Y-%m-%d).sql"
 
       - name: Commit dump to backups branch
         run: |
