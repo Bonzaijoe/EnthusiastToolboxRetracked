@@ -7,13 +7,19 @@ function isValidPin(pin: string) {
 }
 
 export function Account() {
-  const { currentUser } = useCurrentUser()
+  const { currentUser, updateCurrentUser } = useCurrentUser()
   const [currentPin, setCurrentPin] = useState('')
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  const [rankingThreshold, setRankingThreshold] = useState(currentUser?.rankingThreshold ?? 1)
+  const [includeUnrated, setIncludeUnrated] = useState(currentUser?.includeUnrated ?? true)
+  const [filtersError, setFiltersError] = useState<string | null>(null)
+  const [filtersSuccess, setFiltersSuccess] = useState(false)
+  const [savingFilters, setSavingFilters] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -65,10 +71,71 @@ export function Account() {
     setConfirmPin('')
   }
 
+  async function handleSaveFilters(e: React.FormEvent) {
+    e.preventDefault()
+    setFiltersError(null)
+    setFiltersSuccess(false)
+    if (!currentUser) return
+
+    setSavingFilters(true)
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ ranking_threshold: rankingThreshold, include_unrated: includeUnrated })
+      .eq('id', currentUser.id)
+    setSavingFilters(false)
+
+    if (updateError) {
+      setFiltersError('Could not save these settings. Try again.')
+      return
+    }
+
+    updateCurrentUser({ rankingThreshold, includeUnrated })
+    setFiltersSuccess(true)
+  }
+
   return (
     <div>
       <h1>Account Settings</h1>
       <p>Logged in as {currentUser?.name}.</p>
+
+      <h2>My Rankings Filters</h2>
+      <p>Don't want to rank all of your coasters? Set a minimum rating to filter out the garbage!</p>
+      <form
+        onSubmit={handleSaveFilters}
+        style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 320, marginBottom: '2rem' }}
+      >
+        <label>
+          Ranking Threshold (1-10)
+          <input
+            type="number"
+            min={1}
+            max={10}
+            step={1}
+            value={rankingThreshold}
+            onWheel={(e) => e.currentTarget.blur()}
+            onChange={(e) => setRankingThreshold(Math.min(10, Math.max(1, Number(e.target.value))))}
+            style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+          />
+        </label>
+        <label>
+          Unrated Coasters
+          <select
+            value={includeUnrated ? 'include' : 'exclude'}
+            onChange={(e) => setIncludeUnrated(e.target.value === 'include')}
+            style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+          >
+            <option value="include">Include on My Rankings Page</option>
+            <option value="exclude">Exclude on My Rankings Page</option>
+          </select>
+        </label>
+        {filtersError && <p style={{ color: 'crimson' }}>{filtersError}</p>}
+        {filtersSuccess && <p style={{ color: 'seagreen' }}>Settings saved.</p>}
+        <button type="submit" disabled={savingFilters}>
+          {savingFilters ? 'Saving...' : 'Save Settings'}
+        </button>
+      </form>
+
+      <h2>Change PIN</h2>
       <form
         onSubmit={handleSubmit}
         style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 320 }}

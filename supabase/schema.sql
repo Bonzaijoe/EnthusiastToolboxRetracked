@@ -9,6 +9,8 @@ create table if not exists users (
   name text not null unique,
   pin text not null,
   is_test_account boolean not null default false, -- excluded from Friends/Combined Rankings, still usable for dev/testing logins
+  ranking_threshold integer not null default 1 check (ranking_threshold between 1 and 10), -- coasters rated below this are hidden from My Rankings; 1 = show everything
+  include_unrated boolean not null default true, -- whether never-rated coasters show on My Rankings despite the threshold above
   created_at timestamptz not null default now()
 );
 

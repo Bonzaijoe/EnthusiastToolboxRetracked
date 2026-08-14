@@ -19,11 +19,29 @@ const SORT_CONFIRM_STEPS = [
 
 const RANKED_CONTAINER_ID = 'ranked-container'
 
+// A coaster passes if it's unrated (and the user still wants those shown) or
+// its rating clears the threshold. Coasters that fail never enter rankedItems/
+// unrankedItems at all - see hiddenRankedItems below for how their existing
+// position data is protected from being lost on save.
+function passesThreshold(item: RankedCoaster, threshold: number, includeUnrated: boolean) {
+  if (item.score === null) return includeUnrated
+  return item.score >= threshold
+}
+
 export function MyRankings() {
   const { currentUser } = useCurrentUser()
   const { setHasUnsavedChanges } = useUnsavedChanges()
   const [rankedItems, setRankedItems] = useState<RankedCoaster[]>([])
   const [unrankedItems, setUnrankedItems] = useState<RankedCoaster[]>([])
+  // Ranked coasters filtered out by the threshold/unrated settings. Never
+  // rendered or draggable, but kept so their saved position isn't lost -
+  // persistRankings tacks them back on below everything visible instead of
+  // deleting their row outright.
+  const [hiddenRankedItems, setHiddenRankedItems] = useState<RankedCoaster[]>([])
+  // Total coasters filtered out by the threshold/unrated settings (ranked +
+  // unranked), just for the "N hidden" note - hiddenRankedItems above is the
+  // subset that actually needs save-time data protection.
+  const [hiddenCount, setHiddenCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -78,26 +96,41 @@ export function MyRankings() {
         })
       }
 
+      // Fall back if this session's stored user predates these settings
+      // (e.g. someone already logged in when this feature shipped) - without
+      // this, undefined would fail every threshold check and blank the page.
+      const threshold = currentUser!.rankingThreshold ?? 1
+      const includeUnrated = currentUser!.includeUnrated ?? true
+      const passes = (r: RankedCoaster) => passesThreshold(r, threshold, includeUnrated)
+
       let ranked: RankedCoaster[]
       let unranked: RankedCoaster[]
+      let hidden: RankedCoaster[]
       if (rankings && rankings.length > 0) {
-        ranked = rankings
+        const allRanked = rankings
           .map((r) => byId.get(r.coaster_id))
           .filter((r): r is RankedCoaster => Boolean(r))
+        ranked = allRanked.filter(passes)
+        hidden = allRanked.filter((r) => !passes(r))
         // No user_rankings row at all = genuinely unranked, and stays that way
         // across saves now (see persistRankings) instead of just getting
         // dumped at the bottom of the list the first time you save.
         const rankedIds = new Set(rankings.map((r) => r.coaster_id))
-        unranked = Array.from(byId.values()).filter((r) => !rankedIds.has(r.coasterId))
+        unranked = Array.from(byId.values()).filter((r) => !rankedIds.has(r.coasterId) && passes(r))
       } else {
         // First time using My Rankings at all - seed a sensible starting order
         // from ratings rather than dumping everything into "unranked".
-        ranked = Array.from(byId.values()).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+        ranked = Array.from(byId.values())
+          .filter(passes)
+          .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
         unranked = []
+        hidden = []
       }
 
       setRankedItems(ranked)
       setUnrankedItems(unranked)
+      setHiddenRankedItems(hidden)
+      setHiddenCount(byId.size - ranked.length - unranked.length)
       setSubmittedAt(submitted && submitted.length > 0 ? submitted[0].submitted_at : null)
       setDirty(false)
       setLoading(false)
@@ -134,10 +167,15 @@ export function MyRankings() {
   // Only ranked items get a position written - anything still sitting in the
   // Unranked drawer stays row-less, so "unranked" survives across saves
   // instead of silently becoming "ranked at the bottom" the moment you save.
+  // Coasters hidden by the ranking threshold are tacked on after everything
+  // visible (rather than dropped) so their position row - and their spot in
+  // Combined Rankings - survives; raising the threshold back up later just
+  // reveals them at the bottom instead of bumping them to Unranked.
   async function persistRankings(newRankedItems: RankedCoaster[]) {
     if (!currentUser) return
+    const fullOrder = [...newRankedItems, ...hiddenRankedItems]
     await supabase.from('user_rankings').delete().eq('user_id', currentUser.id)
-    const rows = newRankedItems.map((item, index) => ({
+    const rows = fullOrder.map((item, index) => ({
       user_id: currentUser.id,
       coaster_id: item.coasterId,
       position: index,
@@ -228,8 +266,12 @@ export function MyRankings() {
     setSaving(true)
     await persistRankings(rankedItems)
     const now = new Date().toISOString()
+    // Same fold-hidden-items-in treatment as persistRankings, for the same
+    // reason - threshold-hidden coasters keep their spot in Combined
+    // Rankings instead of quietly falling out of it.
+    const fullOrder = [...rankedItems, ...hiddenRankedItems]
     await supabase.from('submitted_rankings').delete().eq('user_id', currentUser.id)
-    const rows = rankedItems.map((item, index) => ({
+    const rows = fullOrder.map((item, index) => ({
       user_id: currentUser.id,
       coaster_id: item.coasterId,
       position: index,
@@ -275,6 +317,12 @@ export function MyRankings() {
           <div style={{ marginLeft: drawerOpen ? DRAWER_WIDTH : 0, transition: 'margin-left 0.2s' }}>
             <h1>My Rankings</h1>
             <p>Drag to reorder your personal top list, or click a coaster to rank it against its park/manufacturer/model.</p>
+            {hiddenCount > 0 && (
+              <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+                {hiddenCount} coaster{hiddenCount === 1 ? '' : 's'} hidden by your Ranking Threshold - adjust it on
+                the Account page.
+              </p>
+            )}
             {rankedItems.length > 0 && (
               <>
                 <p style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>

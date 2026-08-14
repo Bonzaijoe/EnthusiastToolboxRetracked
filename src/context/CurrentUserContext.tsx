@@ -1,17 +1,18 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import type { AppUser } from '../types'
+import type { CurrentUser } from '../types'
 
 const STORAGE_KEY = 'enthusiast-toolbox:current-user'
 
 interface CurrentUserContextValue {
-  currentUser: AppUser | null
-  login: (user: AppUser) => void
+  currentUser: CurrentUser | null
+  login: (user: CurrentUser) => void
   logout: () => void
+  updateCurrentUser: (patch: Partial<CurrentUser>) => void
 }
 
 const CurrentUserContext = createContext<CurrentUserContextValue | undefined>(undefined)
 
-function readStoredUser(): AppUser | null {
+function readStoredUser(): CurrentUser | null {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (!stored) return null
   try {
@@ -23,9 +24,9 @@ function readStoredUser(): AppUser | null {
 }
 
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(readStoredUser)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(readStoredUser)
 
-  const login = (user: AppUser) => {
+  const login = (user: CurrentUser) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
     setCurrentUser(user)
   }
@@ -35,8 +36,19 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null)
   }
 
+  // For settings saved elsewhere (e.g. Account) that should take effect
+  // immediately without forcing a full re-login.
+  const updateCurrentUser = (patch: Partial<CurrentUser>) => {
+    setCurrentUser((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, ...patch }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
   return (
-    <CurrentUserContext.Provider value={{ currentUser, login, logout }}>
+    <CurrentUserContext.Provider value={{ currentUser, login, logout, updateCurrentUser }}>
       {children}
     </CurrentUserContext.Provider>
   )

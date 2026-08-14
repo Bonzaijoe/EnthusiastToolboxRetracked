@@ -39,7 +39,7 @@ export function Login() {
 
     const { data, error } = await supabase
       .from('users')
-      .select('id, name, pin')
+      .select('id, name, pin, ranking_threshold, include_unrated')
       .eq('id', selectedUserId)
       .single()
 
@@ -54,7 +54,12 @@ export function Login() {
       return
     }
 
-    login({ id: data.id, name: data.name })
+    login({
+      id: data.id,
+      name: data.name,
+      rankingThreshold: data.ranking_threshold,
+      includeUnrated: data.include_unrated,
+    })
     navigate('/my-coasters')
   }
 

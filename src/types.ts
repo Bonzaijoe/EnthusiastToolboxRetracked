@@ -3,6 +3,14 @@ export interface AppUser {
   name: string
 }
 
+// The logged-in user's own record, including settings that only matter for
+// their own session (e.g. filtering their own My Rankings page) - other
+// users are only ever seen as plain AppUser (Friends list, login picker).
+export interface CurrentUser extends AppUser {
+  rankingThreshold: number
+  includeUnrated: boolean
+}
+
 export interface Park {
   id: number
   rcdb_id: number | null

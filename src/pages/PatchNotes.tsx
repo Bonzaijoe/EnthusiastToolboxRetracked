@@ -9,7 +9,7 @@ interface PatchEntry {
 const PATCH_NOTES: PatchEntry[] = [
   {
     date: 'August 14, 2026',
-    version: '0.17',
+    version: '0.22',
     items: [
       'Combined Ratings is now the default tab (was Rankings), and sits on the left of the toggle',
       'Combined Rankings/Ratings are now capped at the top 200 coasters',
@@ -19,6 +19,7 @@ const PATCH_NOTES: PatchEntry[] = [
       'Added a confirmation before leaving My Rankings with unsaved changes, whether that\'s clicking another tab, logging out, closing the tab, refreshing, or typing a new URL',
       'Added an "Unranked Coasters" drawer to My Rankings - a tab on the left edge that opens a separate list of everything you haven\'t placed yet, with its own scroll so opening it doesn\'t lose your spot in a long list. Drag one straight into your ranked list at the exact spot you want (or drag one back out if you change your mind) instead of hunting for it at the bottom of 500+ coasters',
       'Coasters you haven\'t placed now stay in the Unranked drawer across saves, instead of quietly becoming "ranked at the bottom" the first time you hit Save Rankings',
+      'Added a "Ranking Threshold" setting on the Account page - set a minimum rating (1-10) and anything below it disappears from My Rankings, with a separate toggle for whether unrated coasters should still show. Nothing is deleted: raise the threshold back down and everything reappears exactly where it was',
     ],
   },
   {
